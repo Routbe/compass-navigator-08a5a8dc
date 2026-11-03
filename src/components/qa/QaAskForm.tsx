@@ -6,6 +6,10 @@ import { useI18n } from "@/lib/i18n";
 import { askAnonymousQuestion, getQuestionAccess } from "@/lib/questions.functions";
 import { QUESTION_MAX } from "@/lib/questions-rules";
 import { needsNudge } from "@/lib/qa/nudge";
+import { needsCrisisHelp } from "@/lib/qa/crisis";
+import { takeProof } from "@/lib/altcha-client";
+import { Altcha } from "@/components/Altcha";
+import { QaCrisisHelp } from "./QaCrisisHelp";
 import { nextDiceIndex } from "@/lib/qa/prompts";
 import { requestRewrite } from "@/lib/qa/rewrite-client";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,6 +29,8 @@ const ERRORS: Record<string, string> = {
   not_found: "pages.qa.ask.closed",
   restricted: "pages.qa.ask.restricted",
   too_many: "pages.qa.ask.tooMany",
+  bot: "pages.qa.ask.bot",
+  unavailable: "pages.qa.ask.failed",
 };
 
 const WAND_ERRORS: Record<string, string> = {
@@ -69,6 +75,7 @@ export function QaAskForm({ handle, space, headline, theme, size = "page", desig
   const wandHintId = useId();
   const nudgeId = useId();
   const nudge = needsNudge(body);
+  const crisis = needsCrisisHelp(body);
   const locked = access.data ? !access.data.canSend : false;
   const big = size === "page";
   const masked = rewrite !== null && body.trim() === rewrite.text.trim();
@@ -87,7 +94,8 @@ export function QaAskForm({ handle, space, headline, theme, size = "page", desig
     setError(null);
     setPhase("sending");
     try {
-      const { result } = await ask({ data: { handle, space, body, ghost: masked } });
+      const altcha = await takeProof().catch(() => null);
+      const { result } = await ask({ data: { handle, space, body, ghost: masked, altcha } });
       if (result === "ok") {
         setBody("");
         setOriginal(null);
@@ -260,6 +268,7 @@ export function QaAskForm({ handle, space, headline, theme, size = "page", desig
           <span>{t("pages.qa.ask.nudge")}</span>
         </p>
       )}
+      {crisis && <QaCrisisHelp audience="sender" className="mt-3" />}
       {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
 
       <Button
@@ -284,6 +293,10 @@ export function QaAskForm({ handle, space, headline, theme, size = "page", desig
       <p className={cn("mt-2 flex items-center justify-center gap-1.5 text-center text-xs", !theme && "text-muted-foreground")} style={muted}>
         <Lock className="h-3 w-3" aria-hidden /> {t("pages.qa.ask.anonymous")}
       </p>
+      <p className={cn("mt-1 text-center text-[11px] leading-snug", !theme && "text-muted-foreground")} style={muted}>
+        {t("pages.qa.ask.disclaimer")}
+      </p>
+      {!preview && <Altcha className="justify-center" />}
       {!preview && <nav aria-label={t("pages.qa.help.label")} className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs" style={muted}>
         <Link to="/info/anonymous-questions" className="underline underline-offset-4">{t("pages.qa.help.questions")}</Link>
         <Link to="/safety/anonymous-questions" className="underline underline-offset-4">{t("pages.qa.help.privacy")}</Link>

@@ -15,7 +15,10 @@ export async function sha256Hex(value: string): Promise<string> {
 export async function hitRateLimit(name: string, subject: string, rule: RateRule, options: { failClosed?: boolean } = {}) {
   const now = Date.now();
   try {
-    const bucket = `${name}:${await sha256Hex(subject)}`;
+    // Keyed, purpose-separated and rotated daily: an IP cannot be recovered from
+    // a bucket, and buckets of different limits cannot be linked to each other.
+    const { rateLimitKey } = await import("@/lib/qa/privacy-keys.server");
+    const bucket = `${name}:${await rateLimitKey(name, subject, now)}`;
     const startMs = windowStartMs(now, rule.windowSec);
     const start = new Date(startMs).toISOString();
     const prevStart = new Date(startMs - rule.windowSec * 1000).toISOString();

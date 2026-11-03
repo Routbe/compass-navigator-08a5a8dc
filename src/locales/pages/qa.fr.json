@@ -147,5 +147,22 @@
   "pages.qa.inbox.insightsRatioLabel": "Taux de réponse",
   "pages.qa.share.qrLabel": "QR code vers ta page de questions",
   "pages.qa.share.qrHint": "Scanne pour envoyer tout de suite une question anonyme. Idéal sur une affiche ou un sticker.",
-  "pages.qa.share.qrDownload": "Télécharger le QR"
+  "pages.qa.share.qrDownload": "Télécharger le QR",
+  "pages.qa.ask.disclaimer": "Tu es anonyme pour le destinataire. Ton adresse IP et ton appareil ne sont conservés que sous forme de code irréversible, créé avec une clé secrète qui change, contre le spam, puis effacés automatiquement. La réécriture par IA aide, mais n'est pas une garantie absolue.",
+  "pages.qa.ask.bot": "La vérification anti-robot a échoué. Recharge la page et réessaie.",
+  "pages.qa.crisis.label": "Besoin d'aide ?",
+  "pages.qa.crisis.sender": "Ça ne va pas, pour toi ou pour quelqu'un d'autre ? Parles-en gratuitement et anonymement, jour et nuit.",
+  "pages.qa.crisis.recipient": "Ce message peut venir de quelqu'un en détresse, ou te toucher. Parles-en gratuitement et anonymement, jour et nuit.",
+  "pages.qa.crisis.line.zelfmoordlijn": "Zelfmoordlijn (néerlandais)",
+  "pages.qa.crisis.line.cps": "Centre de Prévention du Suicide",
+  "pages.qa.crisis.line.emergency": "Urgences",
+  "pages.qa.inbox.when.justNow": "À l'instant",
+  "pages.qa.inbox.when.thisMorning": "Ce matin",
+  "pages.qa.inbox.when.thisAfternoon": "Cet après-midi",
+  "pages.qa.inbox.when.thisEvening": "Ce soir",
+  "pages.qa.inbox.when.lastNight": "Cette nuit",
+  "pages.qa.inbox.when.yesterday": "Hier",
+  "pages.qa.inbox.when.yesterdayEvening": "Hier soir",
+  "pages.qa.inbox.when.fewDays": "Il y a quelques jours",
+  "pages.qa.inbox.when.fewWeeks": "Il y a quelques semaines"
 }

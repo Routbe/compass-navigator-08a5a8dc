@@ -16,6 +16,9 @@ import {
 } from "@/lib/questions.functions";
 import { ANSWER_MAX } from "@/lib/questions-rules";
 import { storedPromptLabel } from "@/lib/qa/prompts";
+import { fuzzyArrival } from "@/lib/qa/privacy-keys";
+import { needsCrisisHelp } from "@/lib/qa/crisis";
+import { QaCrisisHelp } from "./QaCrisisHelp";
 import { INBOX_PAGE_SIZE, INBOX_SYNC_MS, UNDO_DELETE_MS, answerRatio, filterInbox, mergeNewest, type InboxFilter } from "@/lib/qa/inbox-rules";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +65,7 @@ export function QaInbox({ space, limit, compact = false }: {
   const scroll = !limit;
   const q = useInfiniteQuery({
     queryKey: ["my-questions", space ?? "all", limit ?? "all"],
-    initialPageParam: null as { at: string; id: string } | null,
+    initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => fetchMine({ data: { space, before: pageParam, limit: limit ?? INBOX_PAGE_SIZE } }),
     getNextPageParam: (last) => (scroll ? last.next ?? undefined : undefined),
     retry: false,
@@ -121,7 +124,7 @@ export function QaInbox({ space, limit, compact = false }: {
       try {
         const top = newestRef.current;
         if (!top) { void qc.invalidateQueries({ queryKey: ["my-questions", space ?? "all"] }); return; }
-        const { questions } = await fetchNewRef.current({ data: { space, after: { at: top.createdAt, id: top.id } } });
+        const { questions } = await fetchNewRef.current({ data: { space, after: top.id } });
         if (questions.length === 0) return;
         setArrived((prev) => mergeNewest(questions, prev));
         setFreshIds(new Set(questions.map((x) => x.id)));
@@ -224,6 +227,14 @@ export function QaInbox({ space, limit, compact = false }: {
   }
 
   const shareOwner = share ? owners[share.space] : undefined;
+  const now = new Date();
+  const arrivalText = (iso: string) => {
+    if (!iso) return "";
+    const label = fuzzyArrival(new Date(iso), now);
+    return label.key === "month"
+      ? label.date.toLocaleDateString(locale, { month: "long", year: "numeric" })
+      : t(`pages.qa.inbox.when.${label.key}`);
+  };
   const ins = insightsQ.data?.ready ? insightsQ.data : null;
   const ratio = ins ? answerRatio(ins.answered, ins.total) : null;
 
@@ -279,7 +290,7 @@ export function QaInbox({ space, limit, compact = false }: {
                     {it.published && <span className="rounded-full bg-story-ring/20 px-1.5 text-story-ring">{t("pages.qa.inbox.live")}</span>}
                   </p>
                   <p className="mt-1.5 break-words text-[15px] font-medium leading-snug">{it.body}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{new Date(it.createdAt).toLocaleString(locale)}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{arrivalText(it.arrivedAt)}</p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -309,6 +320,7 @@ export function QaInbox({ space, limit, compact = false }: {
                 </DropdownMenu>
               </div>
 
+              {needsCrisisHelp(it.body) && <QaCrisisHelp audience="recipient" className="dark mt-3" />}
               {it.answer && !isReplying && (
                 <p className="mt-3 whitespace-pre-line break-words rounded-xl bg-muted px-3 py-2 text-sm">{it.answer}</p>
               )}

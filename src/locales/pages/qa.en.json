@@ -147,5 +147,22 @@
   "pages.qa.inbox.insightsRatioLabel": "Answer ratio",
   "pages.qa.share.qrLabel": "QR code to your question page",
   "pages.qa.share.qrHint": "Scan to send an anonymous question right away. Great on a poster or sticker.",
-  "pages.qa.share.qrDownload": "Download QR"
+  "pages.qa.share.qrDownload": "Download QR",
+  "pages.qa.ask.disclaimer": "You are anonymous to the recipient. Your IP address and device are only kept as an irreversible code made with a secret, rotating key, against spam, and deleted automatically. AI rewriting helps, but is no absolute guarantee.",
+  "pages.qa.ask.bot": "The bot check failed. Reload the page and try again.",
+  "pages.qa.crisis.label": "Need help?",
+  "pages.qa.crisis.sender": "Not doing well, or worried about someone? Talk about it for free and anonymously, day and night.",
+  "pages.qa.crisis.recipient": "This message may come from someone in distress, or it may hurt. Talk about it for free and anonymously, day and night.",
+  "pages.qa.crisis.line.zelfmoordlijn": "Suicide line (Dutch)",
+  "pages.qa.crisis.line.cps": "Suicide prevention (French)",
+  "pages.qa.crisis.line.emergency": "Emergency",
+  "pages.qa.inbox.when.justNow": "Just now",
+  "pages.qa.inbox.when.thisMorning": "This morning",
+  "pages.qa.inbox.when.thisAfternoon": "This afternoon",
+  "pages.qa.inbox.when.thisEvening": "This evening",
+  "pages.qa.inbox.when.lastNight": "Last night",
+  "pages.qa.inbox.when.yesterday": "Yesterday",
+  "pages.qa.inbox.when.yesterdayEvening": "Yesterday evening",
+  "pages.qa.inbox.when.fewDays": "A few days ago",
+  "pages.qa.inbox.when.fewWeeks": "A few weeks ago"
 }

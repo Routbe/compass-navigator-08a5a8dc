@@ -3,8 +3,10 @@ import { z } from "zod";
 
 /**
  * Ghost Mode "magic wand": rewrites a draft anonymous message so the writing
- * style no longer gives the sender away. Nothing is stored or logged; the
- * browser puts the answer back in the textarea and the sender decides to send.
+ * style no longer gives the sender away. ROUT stores nothing and logs no text;
+ * the draft (without account, cookie or IP) is processed by the configured
+ * sovereign provider under its own terms. The browser puts the answer back in
+ * the textarea and the sender decides to send.
  * Same-site only, max 3 rewrites per minute (20 per hour) per IP.
  */
 const Body = z.object({ text: z.string().max(600), ui_language: z.enum(["nl", "en", "fr", "de"]).optional().catch(undefined) });

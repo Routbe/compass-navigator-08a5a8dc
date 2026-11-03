@@ -2,7 +2,10 @@
  * Minor protection rules (db/0174). Pure and browser-safe: age from a birth
  * date, who may send a question at each Q&A level, and the sign-up headers.
  */
+/** Under this age a parent must consent (owner decision, db/0174). */
 export const MINOR_AGE = 16;
+/** Under this age Q&A defaults to private (verified accounts only), per EU minors guidance (db/0183). */
+export const PROTECTED_AGE = 18;
 export const SIGNUP_DOB_HEADER = "x-rout-dob";
 export const SIGNUP_PARENT_EMAIL_HEADER = "x-rout-parent-email";
 export const PARENT_PAYMENT_HOURS = 48;
@@ -48,6 +51,12 @@ export function isMinorDob(raw: string, today = new Date()): boolean {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** True when the person is younger than 18: private defaults apply. */
+export function isProtectedDob(raw: string, today = new Date()): boolean {
+  const age = ageOn(raw, today);
+  return age !== null && age < PROTECTED_AGE;
+}
 
 /** Validates the sign-up age fields; a minor must give a parent address that is not their own. */
 export function signupAgeProblem(input: { dob: string; parentEmail: string; email: string }, today = new Date()):

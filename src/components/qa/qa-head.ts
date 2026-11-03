@@ -13,6 +13,8 @@ export function qaAskHead(handle: string, space: QaSpace) {
   return {
     meta: [
       { title },
+      // An anonymous inbox must never show up in search results.
+      { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: description },
       { property: "og:title", content: title },
       { property: "og:description", content: description },

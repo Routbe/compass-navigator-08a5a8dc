@@ -1302,6 +1302,10 @@ export interface PublicProfileQuestionsRow {
   "is_quarantined": boolean;
   "quarantine_reason": string | null;
   "style_masked": boolean;
+  "sender_acct_key": string | null;
+  "abuse_key": string | null;
+  "abuse_key_until": string | Date | null;
+  "visible_after": string | Date;
 }
 
 export interface PublicProfileVisitsRow {
@@ -1469,6 +1473,7 @@ export interface PublicQaTrustChargesRow {
   "sender_user_id": string | null;
   "sender_key": string | null;
   "charged_at": string | Date;
+  "muter_net": string | null;
 }
 
 export interface PublicQrScansRow {
@@ -1613,6 +1618,7 @@ export interface PublicShadowMutesRow {
   "muted_sender_key": string | null;
   "created_at": string | Date;
   "action_id": string;
+  "space": string | null;
 }
 
 export interface PublicSharedFilesRow {
@@ -2005,6 +2011,7 @@ export interface PublicUsersRow {
   "trust_score": number;
   "global_shadow_ban_starts_at": string | Date | null;
   "global_shadow_ban_until": string | Date | null;
+  "trust_healed_at": string | Date | null;
 }
 
 export interface PublicVerificationPaymentsRow {

@@ -41,50 +41,95 @@ async function questionAccess(h: string, sp: "root" | "alias", userId: string | 
   return { level, canSend: canSendQuestion(level, { signedIn: Boolean(userId), verified }) };
 }
 
-/** Per-device key (hashed cookie) so a recipient can mute an anonymous sender. */
-async function senderDeviceKey(): Promise<string> {
+/**
+ * Per-device secret (HttpOnly __Host- cookie, 90 days) so a recipient can mute
+ * an anonymous sender. The secret itself is never stored: only keyed hashes
+ * derived from it, scoped to one recipient canvas by the database.
+ */
+async function deviceSecret(): Promise<string> {
   const { getCookie, setCookie } = await import("@tanstack/react-start/server");
-  const { sha256Hex } = await import("@/lib/rate-limit-db.server");
   let sid = getCookie(QA_DEVICE_COOKIE);
   if (!sid || !/^[A-Za-z0-9_-]{32,64}$/.test(sid)) {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
     sid = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    setCookie(QA_DEVICE_COOKIE, sid, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 400 });
+    setCookie(QA_DEVICE_COOKIE, sid, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: QA_DEVICE_COOKIE_DAYS * 86_400 });
   }
-  return sha256Hex(`qa-device:${sid}`);
+  return sid;
 }
+
+type AskResult = "ok" | "invalid" | "not_found" | "restricted" | "too_many" | "bot" | "unavailable";
 
 /**
  * Public send. Muted or shadow-banned senders get the same "ok" as everybody:
- * the database quarantines their message silently. Ghost Mode happens before
- * sending (magic wand → /api/ai/rewrite), so the sender approves the exact
- * text that is stored; `ghost` only labels a message that came from the wand.
+ * the database quarantines their message silently. Every answer — delivered,
+ * quarantined or refused — is padded to the same duration (constant-time), so
+ * response timing cannot reveal a mute. Ghost Mode happens before sending
+ * (magic wand → /api/ai/rewrite); `ghost` only labels a wand message.
  */
 export const askAnonymousQuestion = createServerFn({ method: "POST" })
   .middleware([optionalAuth])
   .inputValidator((input: unknown) =>
-    z.object({ handle, space, body: z.string().max(QUESTION_MAX * 2), ghost: z.boolean().default(false) }).parse(input),
+    z.object({
+      handle,
+      space,
+      body: z.string().max(QUESTION_MAX * 2),
+      ghost: z.boolean().default(false),
+      altcha: z.string().max(4000).nullable().optional(),
+    }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const access = await questionAccess(data.handle, data.space, context.userId);
-    if (access.level === "disabled") return { result: "not_found" as const, masked: false };
-    if (!access.canSend) return { result: "restricted" as const, masked: false };
-    const { getRequest } = await import("@tanstack/react-start/server");
-    const { clientIp, hitRateLimit } = await import("@/lib/rate-limit-db.server");
-    const ip = clientIp(getRequest());
-    const minute = await hitRateLimit("question-ask", ip, QUESTION_RATE, { failClosed: true });
-    const hour = minute.ok ? await hitRateLimit("question-ask-hour", ip, QUESTION_RATE_HOURLY, { failClosed: true }) : minute;
-    if (!minute.ok || !hour.ok) return { result: "too_many" as const, masked: false };
-    const { normalizeText } = await import("./questions-rules");
-    const body = normalizeText(data.body, QUESTION_MAX);
-    if (!body) return { result: "invalid" as const, masked: false };
-    const s = await import("./questions.server");
-    const senderKey = await senderDeviceKey().catch(() => null);
-    const result = await s.submitQuestion({ handle: data.handle, space: data.space, body, senderKey, masked: data.ghost });
-    return { result, masked: data.ghost };
+    const started = Date.now();
+    const { paddedDuration } = await import("./qa/privacy-keys");
+    let result: AskResult = "unavailable";
+    try {
+      result = await sendQuestion(data, context.userId);
+    } catch (e) {
+      console.error("[questions] send failed", e instanceof Error ? e.name : "error");
+    }
+    const wait = paddedDuration(Date.now() - started) - (Date.now() - started);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    return { result, masked: result === "ok" && data.ghost };
   });
 
-const cursor = z.object({ at: z.string().datetime({ offset: true }), id: z.string().uuid() });
+async function sendQuestion(
+  data: { handle: string; space: "root" | "alias"; body: string; ghost: boolean; altcha?: string | null },
+  userId: string | null,
+): Promise<AskResult> {
+  const access = await questionAccess(data.handle, data.space, userId);
+  if (access.level === "disabled") return "not_found";
+  if (!access.canSend) return "restricted";
+  const keys = await import("./qa/privacy-keys.server");
+  if (!keys.hasPrivacySecret()) return "unavailable";
+  const { verifyAltcha } = await import("./altcha.server");
+  if (!(await verifyAltcha(data.altcha ?? null)).ok) return "bot";
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const { clientIp, hitRateLimit } = await import("@/lib/rate-limit-db.server");
+  const ip = clientIp(getRequest());
+  const minute = await hitRateLimit("question-ask", ip, QUESTION_RATE, { failClosed: true });
+  const hour = minute.ok ? await hitRateLimit("question-ask-hour", ip, QUESTION_RATE_HOURLY, { failClosed: true }) : minute;
+  const recipient = hour.ok
+    ? await hitRateLimit("question-recipient", `${data.space}:${data.handle.toLowerCase()}`, QUESTION_RATE_RECIPIENT, { failClosed: true })
+    : hour;
+  if (!minute.ok || !hour.ok || !recipient.ok) return "too_many";
+  const { normalizeText } = await import("./questions-rules");
+  const body = normalizeText(data.body, QUESTION_MAX);
+  if (!body) return "invalid";
+  const sid = await deviceSecret().catch(() => null);
+  const [base, abuse] = await Promise.all([keys.senderBaseKeys(sid, userId), keys.abuseKeys(sid, userId)]);
+  const s = await import("./questions.server");
+  return s.submitQuestion({
+    handle: data.handle,
+    space: data.space,
+    body,
+    deviceBase: base.device,
+    accountBase: base.account,
+    abuseNow: abuse.now,
+    abusePrev: abuse.prev,
+    masked: data.ghost,
+  });
+}
+
+const cursor = z.string().uuid();
 const inboxSpace = z.enum(["root", "alias"]).nullable().default(null);
 
 /** One keyset page of the owner's inbox (newest first). */

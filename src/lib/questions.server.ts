@@ -74,65 +74,74 @@ export async function publicQa(handle: string, space: QaSpace): Promise<QaPublic
   return toPublic(rows[0]?.["qa"]);
 }
 
-/** Always "ok" for a muted or shadow-banned sender: the database quarantines silently. */
+/**
+ * Always "ok" for a muted or shadow-banned sender: the database quarantines
+ * silently. Only keyed base hashes go in; the database scopes them to the
+ * recipient canvas and never sees the device secret, account id or IP.
+ */
 export async function submitQuestion(input: {
   handle: string;
   space: QaSpace;
   body: string;
-  senderKey: string | null;
+  deviceBase: string | null;
+  accountBase: string | null;
+  abuseNow: string | null;
+  abusePrev: string | null;
   masked: boolean;
 }): Promise<"ok" | "invalid" | "not_found"> {
   const body = normalizeText(input.body, QUESTION_MAX);
   if (!body) return "invalid";
-  const rows = (await sql`select public.rout_qa_submit(${input.handle}, ${input.space}, ${body}, ${input.senderKey}, ${input.masked}) as r`) as Row[];
+  const rows = (await sql`select public.rout_qa_submit(${input.handle}, ${input.space}, ${body}, ${input.deviceBase}, ${input.accountBase}, ${input.abuseNow}, ${input.abusePrev}, ${input.masked}) as r`) as Row[];
   const r = rows[0]?.["r"];
   return r === "invalid" || r === "not_found" ? r : "ok";
 }
 
-
 /**
- * One inbox page, newest first, keyset-paged on (created_at, id) so older
- * questions stay reachable without OFFSET scans. `before` is the last row of
- * the previous page. Comparisons use millisecond precision because cursors
- * travel as JavaScript ISO strings; otherwise same-millisecond rows could be skipped.
+ * One inbox page, newest delivery first. Questions appear only after their
+ * random delivery delay. The cursor is the last question id: no timestamp ever
+ * travels to the browser, only the delivery hour.
  */
 export async function myQuestionsPage(
   ownerId: string,
   space: QaSpace | null,
-  before: { at: string; id: string } | null,
+  beforeId: string | null,
   limit: number,
-): Promise<{ questions: Question[]; next: { at: string; id: string } | null }> {
+): Promise<{ questions: Question[]; next: string | null }> {
   const take = Math.min(Math.max(limit, 1), 100);
-  const rows = (await sql`select id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until
-         from public.profile_questions
-        where owner_id = ${ownerId} and not is_quarantined
-          and (${space}::text is null or space = ${space}::text)
-          and (${before?.at ?? null}::timestamptz is null
-               or (date_trunc('milliseconds', created_at), id) < (${before?.at ?? null}::timestamptz, ${before?.id ?? null}::uuid))
-        order by date_trunc('milliseconds', created_at) desc, id desc limit ${take + 1}`) as Row[];
+  const rows = (await sql`with c as (select visible_after, id from public.profile_questions where id = ${beforeId}::uuid and owner_id = ${ownerId})
+       select q.id, q.space, q.body, q.prompt, q.answer, q.published, q.style_masked,
+              date_trunc('hour', q.visible_after) as arrived_hour, q.answered_at, q.story_until
+         from public.profile_questions q
+        where q.owner_id = ${ownerId} and not q.is_quarantined and q.visible_after <= now()
+          and (${space}::text is null or q.space = ${space}::text)
+          and (${beforeId}::uuid is null or (q.visible_after, q.id) < (select visible_after, id from c))
+        order by q.visible_after desc, q.id desc limit ${take + 1}`) as Row[];
   const questions = rows.slice(0, take).map(toQ);
   const last = questions[questions.length - 1];
-  return { questions, next: rows.length > take && last ? { at: last.createdAt, id: last.id } : null };
+  return { questions, next: rows.length > take && last ? last.id : null };
 }
 
-/** Questions that arrived after the newest one the inbox already shows. */
-export async function myQuestionsAfter(ownerId: string, space: QaSpace | null, after: { at: string; id: string }): Promise<Question[]> {
-  const rows = (await sql`select id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until
-         from public.profile_questions
-        where owner_id = ${ownerId} and not is_quarantined
-          and (${space}::text is null or space = ${space}::text)
-          and (date_trunc('milliseconds', created_at), id) > (${after.at}::timestamptz, ${after.id}::uuid)
-        order by date_trunc('milliseconds', created_at) desc, id desc limit 50`) as Row[];
+/** Questions delivered after the one at the top of the open inbox. */
+export async function myQuestionsAfter(ownerId: string, space: QaSpace | null, afterId: string): Promise<Question[]> {
+  const rows = (await sql`with c as (select visible_after, id from public.profile_questions where id = ${afterId}::uuid and owner_id = ${ownerId})
+       select q.id, q.space, q.body, q.prompt, q.answer, q.published, q.style_masked,
+              date_trunc('hour', q.visible_after) as arrived_hour, q.answered_at, q.story_until
+         from public.profile_questions q
+        where q.owner_id = ${ownerId} and not q.is_quarantined and q.visible_after <= now()
+          and (${space}::text is null or q.space = ${space}::text)
+          and exists (select 1 from c)
+          and (q.visible_after, q.id) > (select visible_after, id from c)
+        order by q.visible_after desc, q.id desc limit 50`) as Row[];
   return rows.map(toQ);
 }
 
 /** Private counts for the Insights row; computed in the database, no tracking. */
 export async function myQaInsights(ownerId: string, space: QaSpace | null): Promise<{ week: number; total: number; answered: number }> {
-  const rows = (await sql`select count(*) filter (where created_at > now() - interval '7 days') as week,
+  const rows = (await sql`select count(*) filter (where visible_after > now() - interval '7 days') as week,
                                  count(*) as total,
                                  count(*) filter (where answer is not null) as answered
                             from public.profile_questions
-                           where owner_id = ${ownerId} and not is_quarantined
+                           where owner_id = ${ownerId} and not is_quarantined and visible_after <= now()
                              and (${space}::text is null or space = ${space}::text)`) as Row[];
   const r = rows[0] ?? {};
   return { week: Number(r["week"] ?? 0), total: Number(r["total"] ?? 0), answered: Number(r["answered"] ?? 0) };
@@ -158,9 +167,15 @@ export async function deleteQuestion(ownerId: string, id: string): Promise<void>
 }
 
 /** Zero-knowledge mute: only the message id goes in; the database resolves the sender. */
-export async function muteSenderByMessage(id: string): Promise<boolean> {
-  const rows = (await sql`select public.rout_qa_mute_by_message(${id}::uuid) as ok`) as Row[];
+export async function muteSenderByMessage(id: string, muterNet: string | null): Promise<boolean> {
+  const rows = (await sql`select public.rout_qa_mute_by_message(${id}::uuid, ${muterNet}) as ok`) as Row[];
   return rows[0]?.["ok"] === true;
+}
+
+/** Daily retention, expiry and trust healing (cron). */
+export async function qaMaintenance(): Promise<unknown> {
+  const rows = (await sql`select public.rout_qa_maintenance() as r`) as Row[];
+  return rows[0]?.["r"] ?? null;
 }
 
 export async function questionsEnabled(ownerId: string, space: QaSpace | null = null): Promise<boolean> {

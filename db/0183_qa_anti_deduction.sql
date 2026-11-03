@@ -216,38 +216,38 @@ begin
 end $$;
 revoke all on function public.rout_qa_mute_by_message(uuid, text) from public;
 
--- 8. Public data: no avatar URL when the owner hides the avatar.
+-- 8. Public data (0182 projection): no avatar URL when the owner hides the avatar.
 create or replace function public.rout_qa_public(p_handle text, p_space text)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 declare o record; v_show boolean;
 begin
   select * into o from public.rout_qa_owner(p_handle, p_space);
   if o.owner_id is null then return null; end if;
-  v_show := coalesce((o.prefs ->> 'qaShowAvatar')::boolean, true);
+  v_show := coalesce((o.prefs->>'qaShowAvatar')::boolean, true);
   return jsonb_build_object(
-    'accepting', coalesce((o.prefs ->> 'questionsEnabled')::boolean, false),
-    'onHub', coalesce((o.prefs ->> 'qaOnHub')::boolean, true),
-    'page', coalesce((o.prefs ->> 'qaPage')::boolean, false),
-    'promptKey', o.prefs ->> 'qaPrompt',
-    'promptCustom', o.prefs ->> 'qaPromptCustom',
+    'accepting', coalesce((o.prefs->>'questionsEnabled')::boolean, false),
+    'onHub', coalesce((o.prefs->>'qaOnHub')::boolean, true),
+    'page', coalesce((o.prefs->>'qaPage')::boolean, false),
+    'promptKey', o.prefs->>'qaPrompt', 'promptCustom', o.prefs->>'qaPromptCustom',
     'displayName', o.display_name,
     'avatarUrl', case when v_show then o.avatar_url end,
-    'audience', coalesce(o.prefs ->> 'qaAudience', 'members_only'),
+    'audience', coalesce(o.prefs->>'qaAudience', 'members_only'),
     'showAvatar', v_show,
-    'showProfileLink', coalesce((o.prefs ->> 'qaShowProfileLink')::boolean, true),
-    'design', jsonb_build_object('themeOverrides', o.prefs->'themeOverrides', 'buttonVariant', o.prefs->'buttonVariant', 'buttonRadius', o.prefs->'buttonRadius', 'buttonColor', o.prefs->'buttonColor', 'buttonTextColor', o.prefs->'buttonTextColor', 'fontPairing', o.prefs->'fontPairing', 'buttonsCustom', o.prefs->'buttonsCustom'),
-    'qaLevel', (select to_jsonb(u) ->> 'qa_permission_level' from public.users u where u.id = o.owner_id),
-    'answers', coalesce((
-      select jsonb_agg(jsonb_build_object('id', q.id, 'body', q.body, 'answer', q.answer, 'prompt', q.prompt,
-                                          'answeredAt', q.answered_at, 'storyUntil', q.story_until) order by q.answered_at desc)
-        from (select * from public.profile_questions q
-               where q.owner_id = o.owner_id and q.space = p_space and q.published
-                 and q.answer is not null and not q.is_quarantined
-               order by q.answered_at desc limit 30) q
-    ), '[]'::jsonb)
+    'showProfileLink', coalesce((o.prefs->>'qaShowProfileLink')::boolean, true),
+    'design', (select coalesce(jsonb_object_agg(key, value), '{}'::jsonb)
+      from jsonb_each(coalesce(o.prefs, '{}'::jsonb))
+      where key in ('themeOverrides', 'buttonVariant', 'buttonRadius', 'buttonColor',
+        'buttonTextColor', 'buttonSize', 'fontPairing', 'buttonsCustom', 'typographyCustom',
+        'glassStyle', 'glassOpacity', 'glassBlur', 'glassBorder', 'glassTargets')),
+    'qaLevel', (select to_jsonb(u)->>'qa_permission_level' from public.users u where u.id=o.owner_id),
+    'answers', coalesce((select jsonb_agg(jsonb_build_object(
+      'id',q.id,'body',q.body,'answer',q.answer,'prompt',q.prompt,
+      'answeredAt',q.answered_at,'storyUntil',q.story_until) order by q.answered_at desc)
+      from (select id,body,answer,prompt,answered_at,story_until from public.profile_questions
+        where owner_id=o.owner_id and space=p_space and published and answer is not null
+          and not is_quarantined order by answered_at desc limit 30) q), '[]'::jsonb)
   );
 end $$;
-revoke all on function public.rout_qa_public(text, text) from public;
 
 -- 9. Daily maintenance: expiry, retention and healing.
 create or replace function public.rout_qa_maintenance()

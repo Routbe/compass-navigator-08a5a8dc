@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { optionalAuth, requireAuth } from "@/lib/auth/middleware";
-import { ANSWER_MAX, QA_DEVICE_COOKIE, QUESTION_MAX, QUESTION_RATE, QUESTION_RATE_HOURLY } from "./questions-rules";
+import { ANSWER_MAX, QA_DEVICE_COOKIE, QA_DEVICE_COOKIE_DAYS, QUESTION_MAX, QUESTION_RATE, QUESTION_RATE_HOURLY, QUESTION_RATE_RECIPIENT } from "./questions-rules";
 
 const handle = z.string().trim().regex(/^@?[A-Za-z0-9._-]{1,64}$/).transform((h) => h.replace(/^@/, ""));
 const space = z.enum(["root", "alias"]).default("root");
@@ -194,7 +194,11 @@ export const muteSenderOfQuestion = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => idSchema.strict().parse(input))
   .handler(async ({ data }) => {
     const s = await import("./questions.server");
-    return { ok: await s.muteSenderByMessage(data.id) };
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const { clientIp } = await import("@/lib/rate-limit-db.server");
+    const { muterNetKey } = await import("./qa/privacy-keys.server");
+    const net = await muterNetKey(clientIp(getRequest())).catch(() => null);
+    return { ok: await s.muteSenderByMessage(data.id, net) };
   });
 
 export const unpublishMyQuestion = createServerFn({ method: "POST" })

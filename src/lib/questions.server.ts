@@ -17,7 +17,8 @@ export type Question = {
   answer: string | null;
   published: boolean;
   styleMasked: boolean;
-  createdAt: string;
+  /** Delivery moment truncated to the hour; never the exact send time. */
+  arrivedAt: string;
   answeredAt: string | null;
   storyUntil: string | null;
 };
@@ -35,7 +36,7 @@ function toQ(r: Row): Question {
     answer: str(r["answer"]),
     published: r["published"] === true,
     styleMasked: r["style_masked"] === true,
-    createdAt: iso(r["created_at"]) ?? "",
+    arrivedAt: iso(r["arrived_hour"]) ?? "",
     answeredAt: iso(r["answered_at"]),
     storyUntil: iso(r["story_until"]),
   };

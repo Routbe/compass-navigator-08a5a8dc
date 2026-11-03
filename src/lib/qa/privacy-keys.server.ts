@@ -12,7 +12,7 @@ const enc = new TextEncoder();
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 async function hmac(key: Uint8Array | string, message: string): Promise<Uint8Array> {
-  const raw = typeof key === "string" ? enc.encode(key) : key;
+  const raw = new Uint8Array(typeof key === "string" ? enc.encode(key) : key);
   const k = await crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(message)));
 }

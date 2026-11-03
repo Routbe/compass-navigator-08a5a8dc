@@ -93,7 +93,8 @@ export async function submitQuestion(input: {
 /**
  * One inbox page, newest first, keyset-paged on (created_at, id) so older
  * questions stay reachable without OFFSET scans. `before` is the last row of
- * the previous page.
+ * the previous page. Comparisons use millisecond precision because cursors
+ * travel as JavaScript ISO strings; otherwise same-millisecond rows could be skipped.
  */
 export async function myQuestionsPage(
   ownerId: string,
@@ -107,8 +108,8 @@ export async function myQuestionsPage(
         where owner_id = ${ownerId} and not is_quarantined
           and (${space}::text is null or space = ${space}::text)
           and (${before?.at ?? null}::timestamptz is null
-               or (created_at, id) < (${before?.at ?? null}::timestamptz, ${before?.id ?? null}::uuid))
-        order by created_at desc, id desc limit ${take + 1}`) as Row[];
+               or (date_trunc('milliseconds', created_at), id) < (${before?.at ?? null}::timestamptz, ${before?.id ?? null}::uuid))
+        order by date_trunc('milliseconds', created_at) desc, id desc limit ${take + 1}`) as Row[];
   const questions = rows.slice(0, take).map(toQ);
   const last = questions[questions.length - 1];
   return { questions, next: rows.length > take && last ? { at: last.createdAt, id: last.id } : null };
@@ -120,8 +121,8 @@ export async function myQuestionsAfter(ownerId: string, space: QaSpace | null, a
          from public.profile_questions
         where owner_id = ${ownerId} and not is_quarantined
           and (${space}::text is null or space = ${space}::text)
-          and (created_at, id) > (${after.at}::timestamptz, ${after.id}::uuid)
-        order by created_at desc, id desc limit 50`) as Row[];
+          and (date_trunc('milliseconds', created_at), id) > (${after.at}::timestamptz, ${after.id}::uuid)
+        order by date_trunc('milliseconds', created_at) desc, id desc limit 50`) as Row[];
   return rows.map(toQ);
 }
 

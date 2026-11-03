@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Download, Loader2, Share2 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
+import { Copy, Download, Loader2, QrCode, Share2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { profileImageSrc } from "@/lib/image-proxy-rules";
 import { Button } from "@/components/ui/button";
@@ -65,11 +66,24 @@ export function QaShareDialog({ open, onOpenChange, target, handle, space, displ
       toast.error(t("pages.qa.share.failed"));
     }
   };
-  const download = () => {
-    if (!url) return;
+  const save = (href: string, name: string) => {
     const a = document.createElement("a");
-    a.href = url; a.download = fileName; a.rel = "noopener";
+    a.href = href; a.download = name; a.rel = "noopener";
     document.body.appendChild(a); a.click(); a.remove();
+  };
+  const download = () => { if (url) save(url, fileName); };
+  /** The on-screen QR is transparent; the saved PNG gets a white quiet zone so every camera reads it. */
+  const downloadQr = () => {
+    const src = qrRef.current;
+    if (!src) return;
+    const pad = 48;
+    const out = document.createElement("canvas");
+    out.width = src.width + pad * 2; out.height = src.height + pad * 2;
+    const ctx = out.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(src, pad, pad);
+    save(out.toDataURL("image/png"), `rout-${handle}-ask-qr.png`);
   };
   const copy = async () => {
     try {
@@ -107,6 +121,15 @@ export function QaShareDialog({ open, onOpenChange, target, handle, space, displ
             <Button variant="outline" size="sm" onClick={() => void copy()} className="gap-1"><Copy className="h-3.5 w-3.5" aria-hidden />{t("pages.qa.share.copy")}</Button>
           </div>
           <p className="text-xs text-muted-foreground">{t("pages.qa.share.howto")} <span className="break-all font-mono text-foreground">{link.replace(/^https?:\/\//, "")}</span></p>
+          <div className="mt-1 flex items-center gap-3 rounded-2xl border border-border p-3">
+            <div className="qr-surface shrink-0 select-none rounded-xl p-2">
+              <QRCodeCanvas ref={qrRef} value={link} size={512} level="M" marginSize={0} bgColor="transparent" fgColor="currentColor" style={{ width: 96, height: 96 }} aria-label={t("pages.qa.share.qrLabel")} />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-xs text-muted-foreground">{t("pages.qa.share.qrHint")}</p>
+              <Button variant="outline" size="sm" onClick={downloadQr} className="gap-1"><QrCode className="h-3.5 w-3.5" aria-hidden />{t("pages.qa.share.qrDownload")}</Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

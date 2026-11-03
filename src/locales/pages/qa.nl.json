@@ -147,5 +147,22 @@
   "pages.qa.inbox.insightsRatioLabel": "Antwoord-ratio",
   "pages.qa.share.qrLabel": "QR-code naar je vragenpagina",
   "pages.qa.share.qrHint": "Scan om meteen een anonieme vraag te sturen. Ideaal op een poster of sticker.",
-  "pages.qa.share.qrDownload": "QR downloaden"
+  "pages.qa.share.qrDownload": "QR downloaden",
+  "pages.qa.ask.disclaimer": "Je bent anoniem voor de ontvanger. Je IP-adres en toestel worden alleen als onomkeerbare code met een geheime, wisselende sleutel bewaard, tegen spam, en automatisch gewist. AI-herschrijven helpt, maar is geen absolute garantie.",
+  "pages.qa.ask.bot": "De botcontrole is mislukt. Herlaad de pagina en probeer opnieuw.",
+  "pages.qa.crisis.label": "Hulp nodig?",
+  "pages.qa.crisis.sender": "Gaat het niet goed met jou of met iemand anders? Praat er gratis en anoniem over, dag en nacht.",
+  "pages.qa.crisis.recipient": "Dit bericht kan wijzen op iemand in nood, of het kan je raken. Praat er gratis en anoniem over, dag en nacht.",
+  "pages.qa.crisis.line.zelfmoordlijn": "Zelfmoordlijn",
+  "pages.qa.crisis.line.cps": "Centre de Prévention du Suicide",
+  "pages.qa.crisis.line.emergency": "Noodnummer",
+  "pages.qa.inbox.when.justNow": "Zojuist",
+  "pages.qa.inbox.when.thisMorning": "Vanochtend",
+  "pages.qa.inbox.when.thisAfternoon": "Vanmiddag",
+  "pages.qa.inbox.when.thisEvening": "Vanavond",
+  "pages.qa.inbox.when.lastNight": "Vannacht",
+  "pages.qa.inbox.when.yesterday": "Gisteren",
+  "pages.qa.inbox.when.yesterdayEvening": "Gisteravond",
+  "pages.qa.inbox.when.fewDays": "Een paar dagen geleden",
+  "pages.qa.inbox.when.fewWeeks": "Een paar weken geleden"
 }

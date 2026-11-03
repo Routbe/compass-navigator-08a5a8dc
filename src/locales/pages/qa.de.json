@@ -147,5 +147,22 @@
   "pages.qa.inbox.insightsRatioLabel": "Antwortquote",
   "pages.qa.share.qrLabel": "QR-Code zu deiner Fragenseite",
   "pages.qa.share.qrHint": "Scannen, um sofort eine anonyme Frage zu senden. Ideal auf Poster oder Sticker.",
-  "pages.qa.share.qrDownload": "QR herunterladen"
+  "pages.qa.share.qrDownload": "QR herunterladen",
+  "pages.qa.ask.disclaimer": "Du bist für den Empfänger anonym. Deine IP-Adresse und dein Gerät werden nur als unumkehrbarer Code mit einem geheimen, wechselnden Schlüssel gegen Spam gespeichert und automatisch gelöscht. KI-Umschreiben hilft, ist aber keine absolute Garantie.",
+  "pages.qa.ask.bot": "Die Bot-Prüfung ist fehlgeschlagen. Lade die Seite neu und versuche es erneut.",
+  "pages.qa.crisis.label": "Brauchst du Hilfe?",
+  "pages.qa.crisis.sender": "Geht es dir oder jemand anderem nicht gut? Sprich kostenlos und anonym darüber, Tag und Nacht.",
+  "pages.qa.crisis.recipient": "Diese Nachricht kann von jemandem in Not kommen oder dich treffen. Sprich kostenlos und anonym darüber, Tag und Nacht.",
+  "pages.qa.crisis.line.zelfmoordlijn": "Zelfmoordlijn (Niederländisch)",
+  "pages.qa.crisis.line.cps": "Suizidprävention (Französisch)",
+  "pages.qa.crisis.line.emergency": "Notruf",
+  "pages.qa.inbox.when.justNow": "Gerade eben",
+  "pages.qa.inbox.when.thisMorning": "Heute Morgen",
+  "pages.qa.inbox.when.thisAfternoon": "Heute Nachmittag",
+  "pages.qa.inbox.when.thisEvening": "Heute Abend",
+  "pages.qa.inbox.when.lastNight": "Heute Nacht",
+  "pages.qa.inbox.when.yesterday": "Gestern",
+  "pages.qa.inbox.when.yesterdayEvening": "Gestern Abend",
+  "pages.qa.inbox.when.fewDays": "Vor ein paar Tagen",
+  "pages.qa.inbox.when.fewWeeks": "Vor ein paar Wochen"
 }

@@ -50,6 +50,7 @@ import {
 import { BookingCard } from "@/components/profile/BookingCard";
 import { parseBookingConfig } from "@/lib/booking";
 import { GalleryCard } from "@/components/profile/GalleryCard";
+import { SocialGridCard } from "@/components/profile/SocialGridCard";
 import { MediaEmbedCard } from "@/components/profile/MediaEmbedCard";
 import { AudioBlockCard } from "@/components/profile/AudioBlockCard";
 import { ContactFormCard } from "@/components/profile/ContactFormCard";
@@ -62,6 +63,7 @@ import { parseEventListConfig } from "@/lib/events";
 import { parseFaqConfig, parseMapConfig, parsePollConfig } from "@/lib/interactions";
 
 import { parseGalleryConfig } from "@/lib/gallery";
+import { parseSocialGridConfig } from "@/lib/social-grid";
 import { SocialPlatformIcon } from "@/lib/social-icons";
 import { PLATFORM_LABEL, formatFollowers } from "@/lib/social-verify";
 import { formatReach } from "@/lib/total-reach";
@@ -668,6 +670,8 @@ export function ProfileView({
             ) : isWidgetBlock(b.kind) || isBookingUrl(blockHref(b)) ? (
               b.kind === "media_gallery" ? (
                 <GalleryCard key={b.id} config={parseGalleryConfig(b.value)} style={styleFor(b.kind)} />
+              ) : b.kind === "social_grid" ? (
+                <div key={b.id} className="w-full lg:col-span-full"><SocialGridCard config={parseSocialGridConfig(b.value)} style={styleFor(b.kind)} /></div>
               ) : b.kind === "social_feed" ? (
                 <SocialFeedCard key={b.id} value={b.value} style={styleFor(b.kind)} profile={profile.username ?? ""} blockId={String(b.id)} />
               ) : b.kind === "media_embed" ? (

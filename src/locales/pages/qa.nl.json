@@ -130,5 +130,22 @@
   "pages.qa.help.label": "Uitleg over vragen",
   "pages.qa.help.questions": "Over anonieme vragen",
   "pages.qa.help.privacy": "Anonimiteit & veiligheid",
-  "pages.qa.help.ai": "AI & Ghost Mode"
+  "pages.qa.help.ai": "AI & Ghost Mode",
+  "pages.qa.inbox.filterLabel": "Berichten filteren",
+  "pages.qa.inbox.filter.all": "Alle",
+  "pages.qa.inbox.filter.open": "Onbeantwoord",
+  "pages.qa.inbox.filter.answered": "Beantwoord",
+  "pages.qa.inbox.emptyFilter": "Geen berichten in deze weergave.",
+  "pages.qa.inbox.deleted": "Bericht verwijderd",
+  "pages.qa.inbox.undo": "Ongedaan maken",
+  "pages.qa.inbox.newArrival": "Nieuw anoniem bericht binnen",
+  "pages.qa.inbox.loadingMore": "Meer berichten laden…",
+  "pages.qa.inbox.insights": "Inzichten",
+  "pages.qa.inbox.insightsWeek": "vragen deze week",
+  "pages.qa.inbox.insightsWeekLabel": "Aantal vragen deze week",
+  "pages.qa.inbox.insightsRatio": "beantwoord",
+  "pages.qa.inbox.insightsRatioLabel": "Antwoord-ratio",
+  "pages.qa.share.qrLabel": "QR-code naar je vragenpagina",
+  "pages.qa.share.qrHint": "Scan om meteen een anonieme vraag te sturen. Ideaal op een poster of sticker.",
+  "pages.qa.share.qrDownload": "QR downloaden"
 }

@@ -84,17 +84,52 @@ export const askAnonymousQuestion = createServerFn({ method: "POST" })
     return { result, masked: data.ghost };
   });
 
+const cursor = z.object({ at: z.string().datetime({ offset: true }), id: z.string().uuid() });
+const inboxSpace = z.enum(["root", "alias"]).nullable().default(null);
+
+/** One keyset page of the owner's inbox (newest first). */
 export const getMyQuestions = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) => z.object({ space: z.enum(["root", "alias"]).nullable().default(null) }).parse(input ?? {}))
+  .inputValidator((input: unknown) =>
+    z.object({ space: inboxSpace, before: cursor.nullable().default(null), limit: z.number().int().min(1).max(100).default(50) }).parse(input ?? {}),
+  )
   .handler(async ({ data, context }) => {
     const s = await import("./questions.server");
     try {
-      const [questions, enabled] = await Promise.all([s.myQuestions(context.userId, data.space), s.questionsEnabled(context.userId, data.space)]);
-      return { ready: true, enabled, questions };
+      const [page, enabled] = await Promise.all([
+        s.myQuestionsPage(context.userId, data.space, data.before, data.limit),
+        s.questionsEnabled(context.userId, data.space),
+      ]);
+      return { ready: true, enabled, questions: page.questions, next: page.next };
     } catch (e) {
       console.error("[questions] inbox failed", e instanceof Error ? e.message : e);
-      return { ready: false, enabled: false, questions: [] };
+      return { ready: false, enabled: false, questions: [] as Awaited<ReturnType<typeof s.myQuestionsPage>>["questions"], next: null };
+    }
+  });
+
+/** New arrivals after the newest question the open inbox already shows. */
+export const getMyNewQuestions = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ space: inboxSpace, after: cursor }).parse(input))
+  .handler(async ({ data, context }) => {
+    const s = await import("./questions.server");
+    try {
+      return { questions: await s.myQuestionsAfter(context.userId, data.space, data.after) };
+    } catch {
+      return { questions: [] as Awaited<ReturnType<typeof s.myQuestionsAfter>> };
+    }
+  });
+
+/** Private Insights: questions this week and answer ratio, from plain counts. */
+export const getMyQaInsights = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ space: inboxSpace }).parse(input ?? {}))
+  .handler(async ({ data, context }) => {
+    const s = await import("./questions.server");
+    try {
+      return { ready: true, ...(await s.myQaInsights(context.userId, data.space)) };
+    } catch {
+      return { ready: false, week: 0, total: 0, answered: 0 };
     }
   });
 

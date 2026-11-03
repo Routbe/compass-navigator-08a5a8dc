@@ -130,5 +130,22 @@
   "pages.qa.help.label": "Guides des questions",
   "pages.qa.help.questions": "À propos des questions anonymes",
   "pages.qa.help.privacy": "Anonymat et sécurité",
-  "pages.qa.help.ai": "IA et Ghost Mode"
+  "pages.qa.help.ai": "IA et Ghost Mode",
+  "pages.qa.inbox.filterLabel": "Filtrer les messages",
+  "pages.qa.inbox.filter.all": "Tous",
+  "pages.qa.inbox.filter.open": "Sans réponse",
+  "pages.qa.inbox.filter.answered": "Répondus",
+  "pages.qa.inbox.emptyFilter": "Aucun message dans cette vue.",
+  "pages.qa.inbox.deleted": "Message supprimé",
+  "pages.qa.inbox.undo": "Annuler",
+  "pages.qa.inbox.newArrival": "Nouveau message anonyme",
+  "pages.qa.inbox.loadingMore": "Chargement d'autres messages…",
+  "pages.qa.inbox.insights": "Aperçu",
+  "pages.qa.inbox.insightsWeek": "questions cette semaine",
+  "pages.qa.inbox.insightsWeekLabel": "Questions cette semaine",
+  "pages.qa.inbox.insightsRatio": "répondues",
+  "pages.qa.inbox.insightsRatioLabel": "Taux de réponse",
+  "pages.qa.share.qrLabel": "QR code vers ta page de questions",
+  "pages.qa.share.qrHint": "Scanne pour envoyer tout de suite une question anonyme. Idéal sur une affiche ou un sticker.",
+  "pages.qa.share.qrDownload": "Télécharger le QR"
 }

@@ -15,13 +15,15 @@ async function handle(request: Request) {
   const { purgeExpiredAltcha } = await import("@/lib/altcha.server");
   const { purgeExpiredSecurityCodes } = await import("@/lib/security-code.server");
   const { runDnsPropagationCheck } = await import("@/lib/subdomain-claims.server");
+  const { qaMaintenance } = await import("@/lib/questions.server");
   // The single daily job (Vercel Hobby allows one): every purge is independent and fail-safe.
-  const [assets, sharedFiles, altcha, codes, dns] = await Promise.allSettled([
+  const [assets, sharedFiles, altcha, codes, dns, qa] = await Promise.allSettled([
     purgeExpiredAssets(),
     purgeExpiredSharedFiles(),
     purgeExpiredAltcha(),
     purgeExpiredSecurityCodes(),
     runDnsPropagationCheck(),
+    qaMaintenance(),
   ]);
   const pick = (r: PromiseSettledResult<unknown>) => (r.status === "fulfilled" ? r.value : { error: true });
   return Response.json({
@@ -30,6 +32,7 @@ async function handle(request: Request) {
     altcha: pick(altcha),
     securityCodes: pick(codes),
     dns: pick(dns),
+    qaPrivacy: pick(qa),
   });
 }
 

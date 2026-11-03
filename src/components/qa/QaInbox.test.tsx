@@ -38,7 +38,7 @@ vi.mock("sonner", () => {
 import { QaInbox } from "./QaInbox";
 
 const q = (id: string, answer: string | null, at: string) => ({
-  id, space: "root", body: `vraag ${id}`, prompt: null, answer, published: false, styleMasked: false, createdAt: at, answeredAt: null, storyUntil: null,
+  id, space: "root", body: `vraag ${id}`, prompt: null, answer, published: false, styleMasked: false, arrivedAt: at, answeredAt: null, storyUntil: null,
 });
 
 function renderInbox() {

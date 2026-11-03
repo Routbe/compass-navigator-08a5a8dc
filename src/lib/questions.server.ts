@@ -89,8 +89,6 @@ export async function submitQuestion(input: {
   return r === "invalid" || r === "not_found" ? r : "ok";
 }
 
-const COLS = sql`id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until`;
-void COLS;
 
 /**
  * One inbox page, newest first, keyset-paged on (created_at, id) so older

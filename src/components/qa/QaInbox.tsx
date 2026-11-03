@@ -315,7 +315,7 @@ export function QaInbox({ space, limit, compact = false }: {
                     rows={3}
                     placeholder={t("pages.qa.inbox.answerPlaceholder")}
                     aria-label={t("pages.qa.inbox.answer")}
-                    className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full select-text resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => void publish(it.id)} className="gap-1.5"><Send className="h-3.5 w-3.5" />{it.published ? t("pages.qa.inbox.update") : t("pages.qa.inbox.publish")}</Button>
@@ -337,6 +337,11 @@ export function QaInbox({ space, limit, compact = false }: {
             </li>
           );
         })}
+        {scroll && hasNextPage && (
+          <li ref={sentinel} className="col-span-full flex justify-center py-3 text-xs text-muted-foreground" aria-live="polite">
+            {isFetchingNextPage && <span className="inline-flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />{t("pages.qa.inbox.loadingMore")}</span>}
+          </li>
+        )}
       </ul>
 
       <AlertDialog open={muteId !== null} onOpenChange={(v) => !v && setMuteId(null)}>

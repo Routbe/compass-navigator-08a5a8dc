@@ -1,3 +1,4 @@
+import type React from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +18,15 @@ const toasts = vi.hoisted(() => ({ last: null as null | { onClick: () => void } 
 vi.mock("@/lib/questions.functions", () => fns);
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: "nl", t: (k: string) => k }) }));
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+  DropdownMenuItem: ({ children, onSelect, disabled }: { children: React.ReactNode; onSelect?: () => void; disabled?: boolean }) => (
+    <button type="button" role="menuitem" disabled={disabled} onClick={() => onSelect?.()}>{children}</button>
+  ),
+}));
 vi.mock("sonner", () => {
   const toast = Object.assign(
     vi.fn((_m: string, o?: { action?: { onClick: () => void } }) => { toasts.last = o?.action ?? null; }),
@@ -38,9 +48,8 @@ function renderInbox() {
 
 async function openMenuAndDelete(body: string) {
   const card = screen.getByText(body).closest("li")!;
-  const trigger = card.querySelector('button[aria-label="pages.qa.inbox.actions"]')!;
-  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
-  fireEvent.click(await screen.findByRole("menuitem", { name: /pages.qa.inbox.delete/ }));
+  const item = [...card.querySelectorAll('[role="menuitem"]')].find((el) => el.textContent?.includes("pages.qa.inbox.delete"))!;
+  fireEvent.click(item);
 }
 
 beforeEach(() => {

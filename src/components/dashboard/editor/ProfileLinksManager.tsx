@@ -39,6 +39,7 @@ import { isProfileSectionKind } from "@/lib/profile-section-blocks";
 import { BlockRulesPopover } from "@/components/studio/BlockRulesPopover";
 import { BookingBlockSettings } from "@/components/dashboard/BookingBlockSettings";
 import { GalleryBlockSettings } from "@/components/dashboard/GalleryBlockSettings";
+import { SocialGridBlockSettings } from "@/components/dashboard/SocialGridBlockSettings";
 import { SocialFeedBlockSettings } from "@/components/dashboard/SocialFeedBlockSettings";
 import { MediaEmbedBlockSettings } from "@/components/dashboard/MediaEmbedBlockSettings";
 import { AudioBlockSettings } from "@/components/dashboard/AudioBlockSettings";
@@ -273,6 +274,12 @@ export function ProfileLinksManager({
                     />
                   ) : b.kind === "media_gallery" ? (
                     <GalleryBlockSettings
+                      value={b.value}
+                      onChange={(value) => patch(b.id, { value })}
+                      onTitle={(label) => patch(b.id, { label })}
+                    />
+                  ) : b.kind === "social_grid" ? (
+                    <SocialGridBlockSettings
                       value={b.value}
                       onChange={(value) => patch(b.id, { value })}
                       onTitle={(label) => patch(b.id, { label })}

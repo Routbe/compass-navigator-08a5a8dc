@@ -807,6 +807,12 @@ export const BLOCK_KINDS: {
     placeholder: "Mijn galerij",
   },
   {
+    kind: "social_grid",
+    label: "Social Grid (ROUT native)",
+    category: "media" as const,
+    placeholder: "Mijn grid",
+  },
+  {
     kind: "social_feed",
     label: "Bluesky / Mastodon posts",
     category: "media" as const,
@@ -903,6 +909,7 @@ export const BLOCK_TABS: {
       "media_embed",
       "audio_player",
       "media_gallery",
+      "social_grid",
       "text",
       "spacer",
       "youtube",
@@ -1270,6 +1277,7 @@ export function blockHref(block: ProfileBlock): string {
     case "newsletter":
     case "booking_request":
     case "media_gallery":
+    case "social_grid":
     case "media_embed":
     case "audio_player":
     case "social_feed":
@@ -1305,6 +1313,7 @@ export const isWidgetBlock = (kind: string) =>
   kind === "calendar" ||
   kind === "booking_request" ||
   kind === "media_gallery" ||
+  kind === "social_grid" ||
   kind === "media_embed" ||
   kind === "audio_player" ||
   kind === "social_feed" ||

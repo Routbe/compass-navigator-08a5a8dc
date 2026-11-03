@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/middleware";
 import { z } from "zod";
 import { draftJsonRecordSchema } from "./draft-json-schema";
 import { optionalProfileImageUrlSchema } from "./profile-image-url";
+import { normalizeSocialGridBlocks } from "./social-grid";
 
 /**
  * RPC-laag voor het gratis aliasprofiel (`rout.be/u/<handle>`), dat volledig
@@ -105,6 +106,8 @@ function validateAliasProfile(input: unknown): SaveAliasProfileInput | { __inval
       designLayers: normalizeLayersPref(parsed.displayPrefs["designLayers"]),
     };
   }
+  // Social Grid cards: unsafe images and links never reach a draft.
+  if (parsed.blocks) parsed.blocks = normalizeSocialGridBlocks(parsed.blocks);
   return parsed;
 }
 

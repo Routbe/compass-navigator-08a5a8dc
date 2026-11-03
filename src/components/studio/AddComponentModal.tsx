@@ -52,6 +52,7 @@ export const COMPONENT_LIBRARY: LibraryGroup[] = [
     items: [
       { kind: "video", tag: "video", label: "Video embed", note: "YouTube, Vimeo of TikTok", isNew: true },
       { kind: "media_gallery", tag: "foto", label: "Afbeelding / Galerij", note: "Foto's in een raster", isNew: true },
+      { kind: "social_grid", tag: "foto", label: "Social Grid", note: "Raster van je posts en artikels, elke kaart met eigen link", isNew: true },
       { kind: "social_feed", tag: "socials", label: "Bluesky / Mastodon posts", note: "Je nieuwste posts automatisch op je profiel", isNew: true },
       { kind: "audio_player", tag: "audio", label: "Audio-speler", note: "MP3, podcast of ingesproken introductie", isNew: true },
       { kind: "spotify", tag: "audio", label: "Spotify / Audio embed", note: "Track, album of podcast", isNew: true },
@@ -103,7 +104,7 @@ export const LIVE_COMPONENTS: { provider: string; note: string }[] = [
 ];
 
 /** Curated mix voor "Aanbevolen". */
-const SUGGESTED_KINDS = ["link", "instagram", "text", "video", "media_gallery", "spotify", "newsletter", "feedback", "widget:questions", "widget:badges", "widget:reach", "calendly", "booking_request"];
+const SUGGESTED_KINDS = ["link", "instagram", "text", "video", "media_gallery", "social_grid", "spotify", "newsletter", "feedback", "widget:questions", "widget:badges", "widget:reach", "calendly", "booking_request"];
 const SUGGESTED_LIVE = ["spotify", "github", "youtube", "bluesky", "wsocial", "lichess", "chesscom", "wakatime"];
 
 type CategoryId = "standard" | "socials" | "media" | "leads" | "live" | "business" | "all";

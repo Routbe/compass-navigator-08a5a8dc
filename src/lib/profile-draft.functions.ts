@@ -9,6 +9,7 @@ import {
 } from "./profile-draft-patch";
 import { normalizeLayersPref } from "./profile-display";
 import { normalizeQrSettings } from "./qr-settings";
+import { normalizeSocialGridBlocks } from "./social-grid";
 
 /**
  * Atomic Studio mutations, one per section. Each validates only its own
@@ -85,5 +86,5 @@ export const updateProfileLinks = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => parsePatch(profileLinksPatchSchema, input))
   .handler(async ({ data, context }) => {
     if ("__invalid" in data) return invalid(data.__invalid);
-    return runCanvasPatch(context.userId, context, data.space, data.workspaceId, { fields: { blocks: data.blocks } }, "updateProfileLinks");
+    return runCanvasPatch(context.userId, context, data.space, data.workspaceId, { fields: { blocks: normalizeSocialGridBlocks(data.blocks) } }, "updateProfileLinks");
   });

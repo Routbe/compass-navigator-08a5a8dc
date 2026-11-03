@@ -20,3 +20,4 @@
 - Keep managed Lovable integration files and project identifiers intact when importing source so the project retains its own Cloud connection.
 - The imported custom-session/PostgreSQL backend remains separate from Cloud Auth until explicitly migrated; never bypass its fail-closed runtime role or fabricate successful data-backed actions.
 - Original database scripts in db/ are reference source, not automatically applied Cloud migrations, because their custom roles and auth schemas require a reviewed migration.
+- The Q&A inbox pages with a millisecond keyset cursor on (created_at, id) and picks up arrivals with a visibility-gated "newer than top card" check; deletes are optimistic and commit after the undo window (flushed on unmount). Why: data lives in Neon over HTTP, which has no realtime channel, and Workers cannot hold LISTEN connections.

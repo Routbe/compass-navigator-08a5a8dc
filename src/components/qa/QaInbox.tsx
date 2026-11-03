@@ -107,6 +107,10 @@ export function QaInbox({ space, limit, compact = false }: {
   // Live arrivals: a small "newer than the top card" check while the inbox is visible.
   const newest = loaded[0];
   const newestRef = useRef(newest);
+  const fetchNewRef = useRef(fetchNew);
+  fetchNewRef.current = fetchNew;
+  const tRef = useRef(t);
+  tRef.current = t;
   newestRef.current = newest;
   useEffect(() => {
     if (!q.isSuccess) return;
@@ -117,12 +121,12 @@ export function QaInbox({ space, limit, compact = false }: {
       try {
         const top = newestRef.current;
         if (!top) { void qc.invalidateQueries({ queryKey: ["my-questions", space ?? "all"] }); return; }
-        const { questions } = await fetchNew({ data: { space, after: { at: top.createdAt, id: top.id } } });
+        const { questions } = await fetchNewRef.current({ data: { space, after: { at: top.createdAt, id: top.id } } });
         if (questions.length === 0) return;
         setArrived((prev) => mergeNewest(questions, prev));
         setFreshIds(new Set(questions.map((x) => x.id)));
         void qc.invalidateQueries({ queryKey: ["my-qa-insights"] });
-        if (!compact) toast(t("pages.qa.inbox.newArrival"));
+        if (!compact) toast(tRef.current("pages.qa.inbox.newArrival"));
       } catch {
         /* offline or signed out: the next tick retries */
       } finally {
@@ -133,16 +137,18 @@ export function QaInbox({ space, limit, compact = false }: {
     const onVisible = () => document.visibilityState === "visible" && void check();
     document.addEventListener("visibilitychange", onVisible);
     return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
-  }, [q.isSuccess, space, compact, fetchNew, qc, t]);
+  }, [q.isSuccess, space, compact, qc]);
 
   // Leaving the screen commits any delete still waiting for undo.
+  const delRef = useRef(del);
+  delRef.current = del;
   useEffect(() => {
     const map = pending.current;
     return () => {
-      for (const [id, timer] of map) { clearTimeout(timer); void del({ data: { id } }).catch(() => undefined); }
+      for (const [id, timer] of map) { clearTimeout(timer); void delRef.current({ data: { id } }).catch(() => undefined); }
       map.clear();
     };
-  }, [del]);
+  }, []);
 
   const publish = async (id: string) => {
     const text = drafts[id] ?? loaded.find((i) => i.id === id)?.answer ?? "";

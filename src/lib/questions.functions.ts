@@ -78,16 +78,8 @@ export const askAnonymousQuestion = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const started = Date.now();
-    const { paddedDuration } = await import("./qa/privacy-keys");
-    let result: AskResult = "unavailable";
-    try {
-      result = await sendQuestion(data, context.userId);
-    } catch (e) {
-      console.error("[questions] send failed", e instanceof Error ? e.name : "error");
-    }
-    const wait = paddedDuration(Date.now() - started) - (Date.now() - started);
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    const { constantTime } = await import("./qa/privacy-keys");
+    const result = await constantTime<AskResult>(() => sendQuestion(data, context.userId), "unavailable");
     return { result, masked: result === "ok" && data.ghost };
   });
 

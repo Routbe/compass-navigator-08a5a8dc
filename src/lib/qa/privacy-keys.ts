@@ -26,6 +26,31 @@ export function paddedDuration(elapsedMs: number): number {
   return SEND_FLOOR_MS + Math.ceil((elapsedMs - SEND_FLOOR_MS) / SEND_STEP_MS) * SEND_STEP_MS;
 }
 
+/**
+ * Runs `work` and resolves no earlier than its padded duration, whatever the
+ * outcome (including errors, which resolve to `fallback`).
+ */
+export async function constantTime<T>(
+  work: () => Promise<T>,
+  fallback: T,
+  clock: { now: () => number; sleep: (ms: number) => Promise<void> } = {
+    now: () => Date.now(),
+    sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+  },
+): Promise<T> {
+  const started = clock.now();
+  let out = fallback;
+  try {
+    out = await work();
+  } catch {
+    out = fallback;
+  }
+  const elapsed = clock.now() - started;
+  const wait = paddedDuration(elapsed) - elapsed;
+  if (wait > 0) await clock.sleep(wait);
+  return out;
+}
+
 export type ArrivalLabel =
   | { key: "justNow" | "thisMorning" | "thisAfternoon" | "thisEvening" | "lastNight" | "yesterday" | "yesterdayEvening" | "fewDays" | "fewWeeks" }
   | { key: "month"; date: Date };

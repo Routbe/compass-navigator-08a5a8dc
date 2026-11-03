@@ -89,17 +89,54 @@ export async function submitQuestion(input: {
   return r === "invalid" || r === "not_found" ? r : "ok";
 }
 
-export async function myQuestions(ownerId: string, space: QaSpace | null): Promise<Question[]> {
-  const rows = (space
-    ? await sql`select id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until
-         from public.profile_questions
-        where owner_id = ${ownerId} and space = ${space} and not is_quarantined
-        order by created_at desc limit 200`
-    : await sql`select id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until
+const COLS = sql`id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until`;
+void COLS;
+
+/**
+ * One inbox page, newest first, keyset-paged on (created_at, id) so older
+ * questions stay reachable without OFFSET scans. `before` is the last row of
+ * the previous page.
+ */
+export async function myQuestionsPage(
+  ownerId: string,
+  space: QaSpace | null,
+  before: { at: string; id: string } | null,
+  limit: number,
+): Promise<{ questions: Question[]; next: { at: string; id: string } | null }> {
+  const take = Math.min(Math.max(limit, 1), 100);
+  const rows = (await sql`select id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until
          from public.profile_questions
         where owner_id = ${ownerId} and not is_quarantined
-        order by created_at desc limit 200`) as Row[];
+          and (${space}::text is null or space = ${space}::text)
+          and (${before?.at ?? null}::timestamptz is null
+               or (created_at, id) < (${before?.at ?? null}::timestamptz, ${before?.id ?? null}::uuid))
+        order by created_at desc, id desc limit ${take + 1}`) as Row[];
+  const questions = rows.slice(0, take).map(toQ);
+  const last = questions[questions.length - 1];
+  return { questions, next: rows.length > take && last ? { at: last.createdAt, id: last.id } : null };
+}
+
+/** Questions that arrived after the newest one the inbox already shows. */
+export async function myQuestionsAfter(ownerId: string, space: QaSpace | null, after: { at: string; id: string }): Promise<Question[]> {
+  const rows = (await sql`select id, space, body, prompt, answer, published, style_masked, created_at, answered_at, story_until
+         from public.profile_questions
+        where owner_id = ${ownerId} and not is_quarantined
+          and (${space}::text is null or space = ${space}::text)
+          and (created_at, id) > (${after.at}::timestamptz, ${after.id}::uuid)
+        order by created_at desc, id desc limit 50`) as Row[];
   return rows.map(toQ);
+}
+
+/** Private counts for the Insights row; computed in the database, no tracking. */
+export async function myQaInsights(ownerId: string, space: QaSpace | null): Promise<{ week: number; total: number; answered: number }> {
+  const rows = (await sql`select count(*) filter (where created_at > now() - interval '7 days') as week,
+                                 count(*) as total,
+                                 count(*) filter (where answer is not null) as answered
+                            from public.profile_questions
+                           where owner_id = ${ownerId} and not is_quarantined
+                             and (${space}::text is null or space = ${space}::text)`) as Row[];
+  const r = rows[0] ?? {};
+  return { week: Number(r["week"] ?? 0), total: Number(r["total"] ?? 0), answered: Number(r["answered"] ?? 0) };
 }
 
 /** Publishing (re)starts a 24-hour story around the avatar. */

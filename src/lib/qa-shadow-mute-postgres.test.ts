@@ -11,7 +11,12 @@ const R = "aaaaaaaa-1111-4111-8111-111111111111"; // recipient
 const A = "bbbbbbbb-2222-4222-8222-222222222222"; // signed-in sender
 const R2 = "cccccccc-3333-4333-8333-333333333333";
 const R3 = "dddddddd-4444-4444-8444-444444444444";
-const KEY = "a".repeat(64);
+const KEY = "a".repeat(64); // device base key (the app derives it with HMAC)
+const ACCT_A = "c".repeat(64); // account base key of A
+const ABUSE_A = "d".repeat(64); // current abuse key of A
+const NET1 = "1".repeat(64);
+const NET2 = "2".repeat(64);
+const NET3 = "3".repeat(64);
 const db = new PGlite({ extensions: { pgcrypto, btree_gist } });
 
 beforeAll(async () => {
@@ -29,13 +34,28 @@ async function seed() {
 async function as(id: string | null) {
   await db.exec("reset role");
   await db.exec("set local role rout_app");
+  signedIn = id;
   for (const s of contextStatements({ userId: id, workspaceId: null })) await db.query(s.query, s.params);
 }
-const submit = (handle: string, body: string, key: string | null = null) =>
-  db.query<{ r: string }>("select public.rout_qa_submit($1,'root',$2,$3,false) as r", [handle, body, key]).then((x) => x.rows[0]?.r);
+/** Like the app: signed-in senders get account + abuse keys, guests only a device key. */
+let signedIn: string | null = null;
+const submit = (handle: string, body: string, key: string | null = null, space: "root" | "alias" = "root") =>
+  db.query<{ r: string }>("select public.rout_qa_submit($1,$2,$3,$4,$5,$6,null,false) as r",
+    [handle, space, body, key, signedIn === A ? ACCT_A : null, signedIn === A ? ABUSE_A : null]).then((x) => x.rows[0]?.r);
 const inbox = () =>
   db.query<{ id: string; body: string }>("select id, body from public.profile_questions where not is_quarantined order by created_at");
-const mute = (id: string) => db.query<{ ok: boolean }>("select public.rout_qa_mute_by_message($1) as ok", [id]).then((x) => x.rows[0]?.ok);
+const mute = (id: string, net: string | null = null) =>
+  db.query<{ ok: boolean }>("select public.rout_qa_mute_by_message($1,$2) as ok", [id, net]).then((x) => x.rows[0]?.ok);
+/** Global trust now lives on the rotating abuse key, not on the account row. */
+const abuseTrust = async (key = ABUSE_A) => {
+  await db.exec("reset role");
+  return (await db.query<{ trust_score: number; ban_starts_at: Date | null; ban_until: Date | null }>(
+    "select trust_score, ban_starts_at, ban_until from public.qa_guest_trust where sender_key=$1", [key])).rows[0] ?? { trust_score: 100, ban_starts_at: null, ban_until: null };
+};
+const ageCharges = async (hours: number) => {
+  await db.exec("reset role");
+  await db.query(`update public.qa_trust_charges set charged_at = charged_at - interval '${hours} hours'`);
+};
 const trust = async (id: string) => {
   await db.exec("reset role");
   return (await db.query<{ trust_score: number; global_shadow_ban_starts_at: Date | null; global_shadow_ban_until: Date | null }>(
@@ -125,7 +145,8 @@ it("each mute costs the sender 20 trust points", async () => {
     await submit("recipient", "hallo", null);
     await as(R);
     await mute((await inbox()).rows[0]!.id);
-    expect((await trust(A))?.trust_score).toBe(80);
+    expect((await abuseTrust()).trust_score).toBe(80);
+    expect((await trust(A))?.trust_score).toBe(100);
   } finally { await db.exec("rollback"); }
 }, 30_000);
 
@@ -136,17 +157,35 @@ it("below 50 trust points a 7-day global ban starts after a 12-48 hour delay", a
       await as(A);
       await submit(handle, `bericht aan ${handle}`, null);
     }
-    for (const owner of [R, R2, R3]) {
+    const nets = [NET1, NET2, NET3];
+    for (const [i, owner] of [R, R2, R3].entries()) {
       await as(owner);
-      await mute((await inbox()).rows[0]!.id);
+      await mute((await inbox()).rows.find(() => true)!.id, nets[i]);
+      await ageCharges(25);
     }
-    const t = await trust(A);
-    expect(t?.trust_score).toBe(40);
-    const delayH = (new Date(t!.global_shadow_ban_starts_at!).getTime() - Date.now()) / 3_600_000;
+    const t = await abuseTrust();
+    expect(t.trust_score).toBe(40);
+    const delayH = (new Date(t.ban_starts_at!).getTime() - Date.now()) / 3_600_000;
     expect(delayH).toBeGreaterThanOrEqual(11.9);
     expect(delayH).toBeLessThanOrEqual(48.1);
-    const lengthD = (new Date(t!.global_shadow_ban_until!).getTime() - new Date(t!.global_shadow_ban_starts_at!).getTime()) / 86_400_000;
+    const lengthD = (new Date(t.ban_until!).getTime() - new Date(t.ban_starts_at!).getTime()) / 86_400_000;
     expect(lengthD).toBeCloseTo(7, 5);
+  } finally { await db.exec("rollback"); }
+}, 30_000);
+
+it("a mob cannot drain a sender: at most 20 points per 24 hours, and one muter network counts once a week", async () => {
+  try {
+    await seed();
+    for (const handle of ["recipient", "second", "third"]) {
+      await as(A);
+      await submit(handle, `bericht aan ${handle}`, null);
+    }
+    await as(R); await mute((await inbox()).rows[0]!.id, NET1);
+    await as(R2); await mute((await inbox()).rows[0]!.id, NET2);
+    expect((await abuseTrust()).trust_score).toBe(80);
+    await ageCharges(25);
+    await as(R3); await mute((await inbox()).rows[0]!.id, NET1);
+    expect((await abuseTrust()).trust_score).toBe(80);
   } finally { await db.exec("rollback"); }
 }, 30_000);
 
@@ -170,7 +209,7 @@ it("only the recipient can mute through a message id", async () => {
     const id = (await db.query<{ id: string }>("select id from public.profile_questions")).rows[0]!.id;
     await as(R2);
     expect(await mute(id)).toBe(false);
-    expect((await trust(A))?.trust_score).toBe(100);
+    expect((await abuseTrust()).trust_score).toBe(100);
   } finally { await db.exec("rollback"); }
 }, 30_000);
 
@@ -208,7 +247,7 @@ it("muting, lifting and muting the same sender again costs trust only once", asy
     await mute(first);
     await unmute((await myMutes())[0]!.id);
     await mute(first);
-    expect((await trust(A))?.trust_score).toBe(80);
+    expect((await abuseTrust()).trust_score).toBe(80);
   } finally { await db.exec("rollback"); }
 }, 30_000);
 
@@ -252,5 +291,93 @@ it("only the recipient can list or lift their mutes, and never through the table
     await db.exec("rollback to savepoint s");
     await as(R);
     expect(await myMutes()).toHaveLength(1);
+  } finally { await db.exec("rollback"); }
+}, 30_000);
+
+it("sender keys are scoped per recipient and never stored raw", async () => {
+  try {
+    await seed();
+    await as(A);
+    await submit("recipient", "naar r", KEY);
+    await submit("second", "naar r2", KEY);
+    await db.exec("reset role");
+    const rows = (await db.query<{ sender_key: string; sender_acct_key: string; sender_user_id: string | null }>(
+      "select sender_key, sender_acct_key, sender_user_id from public.profile_questions order by body")).rows;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.sender_key).not.toBe(rows[1]!.sender_key);
+    expect(rows[0]!.sender_acct_key).not.toBe(rows[1]!.sender_acct_key);
+    for (const r of rows) {
+      expect(r.sender_user_id).toBeNull();
+      expect([KEY, ACCT_A]).not.toContain(r.sender_key);
+      expect([KEY, ACCT_A]).not.toContain(r.sender_acct_key);
+    }
+  } finally { await db.exec("rollback"); }
+}, 30_000);
+
+it("a mute on the main profile never silences the same sender on the anonymous profile", async () => {
+  try {
+    await seed();
+    await db.query("insert into public.alias_profiles(user_id, handle, display_prefs) values($1,'ralias',$2::jsonb)",
+      [R, JSON.stringify({ questionsEnabled: true, qaAudience: "public_unrestricted" })]);
+    await as(A);
+    await submit("recipient", "root een", KEY);
+    await as(R);
+    await mute((await inbox()).rows[0]!.id);
+    await as(A);
+    expect(await submit("recipient", "root twee", KEY)).toBe("ok");
+    expect(await submit("ralias", "alias een", KEY, "alias")).toBe("ok");
+    await as(R);
+    expect((await inbox()).rows.map((r) => r.body)).toEqual(["alias een"]);
+  } finally { await db.exec("rollback"); }
+}, 30_000);
+
+it("new questions stay invisible for a random 2-10 minutes", async () => {
+  try {
+    await seed();
+    await as(A);
+    await submit("recipient", "later", KEY);
+    await db.exec("reset role");
+    const d = (await db.query<{ s: number }>("select extract(epoch from visible_after - created_at)::float as s from public.profile_questions")).rows[0]!.s;
+    expect(d).toBeGreaterThanOrEqual(120);
+    expect(d).toBeLessThanOrEqual(601);
+  } finally { await db.exec("rollback"); }
+}, 30_000);
+
+it("a hidden avatar is not sent to visitors", async () => {
+  try {
+    await seed();
+    await db.query("update public.profiles set avatar_url='/api/avatar/x.png', display_prefs=display_prefs || '{\"qaShowAvatar\":false}'::jsonb where id=$1", [R]);
+    await as(null);
+    const qa = (await db.query<{ qa: { avatarUrl: string | null } }>("select public.rout_qa_public('recipient','root') as qa")).rows[0]!.qa;
+    expect(qa.avatarUrl).toBeNull();
+  } finally { await db.exec("rollback"); }
+}, 30_000);
+
+it("daily maintenance expires abuse links, deletes old quarantine, and heals trust", async () => {
+  try {
+    await seed();
+    await as(A);
+    await submit("recipient", "oud", KEY);
+    await db.exec("reset role");
+    await db.query("update public.profile_questions set abuse_key_until = now() - interval '1 minute'");
+    await db.query("insert into public.profile_questions(owner_id, body, is_quarantined, quarantine_reason, created_at) values($1,'void',true,'local_mute', now() - interval '31 days')", [R]);
+    await db.query("insert into public.qa_guest_trust(sender_key, trust_score, updated_at) values($1, 60, now() - interval '8 days')", [ABUSE_A]);
+    await as(R);
+    await db.query("select public.rout_qa_maintenance()");
+    await db.exec("reset role");
+    expect((await db.query("select 1 from public.profile_questions where abuse_key is not null")).rows).toHaveLength(0);
+    expect((await db.query("select 1 from public.profile_questions where body='void'")).rows).toHaveLength(0);
+    expect((await abuseTrust()).trust_score).toBe(70);
+  } finally { await db.exec("rollback"); }
+}, 30_000);
+
+it("accounts under 18 get private Q&A defaults; parental consent stays under 16", async () => {
+  try {
+    await db.exec("begin");
+    const id = "eeeeeeee-5555-4555-8555-555555555555";
+    await db.query("insert into public.users(id,email,date_of_birth) values($1,'teen@example.test', current_date - interval '17 years')", [id]);
+    const u = (await db.query<{ qa_permission_level: string; is_minor: boolean }>("select qa_permission_level, is_minor from public.users where id=$1", [id])).rows[0]!;
+    expect(u.qa_permission_level).toBe("verified_only");
+    expect(u.is_minor).toBe(false);
   } finally { await db.exec("rollback"); }
 }, 30_000);

@@ -30,6 +30,7 @@ export function QaShareDialog({ open, onOpenChange, target, handle, space, displ
   const [blob, setBlob] = useState<Blob | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const qrRef = useRef<HTMLCanvasElement | null>(null);
   const link = typeof window === "undefined" ? qaPaths(handle, space).ask : `${window.location.origin}${qaPaths(handle, space).ask}`;
   const fileName = `rout-${handle}-${target?.kind ?? "story"}.png`;
 
@@ -72,7 +73,7 @@ export function QaShareDialog({ open, onOpenChange, target, handle, space, displ
     document.body.appendChild(a); a.click(); a.remove();
   };
   const download = () => { if (url) save(url, fileName); };
-  /** The on-screen QR is transparent; the saved PNG gets a white quiet zone so every camera reads it. */
+  /** The saved PNG gets a white quiet zone so every camera reads it. */
   const downloadQr = () => {
     const src = qrRef.current;
     if (!src) return;
@@ -123,7 +124,7 @@ export function QaShareDialog({ open, onOpenChange, target, handle, space, displ
           <p className="text-xs text-muted-foreground">{t("pages.qa.share.howto")} <span className="break-all font-mono text-foreground">{link.replace(/^https?:\/\//, "")}</span></p>
           <div className="mt-1 flex items-center gap-3 rounded-2xl border border-border p-3">
             <div className="qr-surface shrink-0 select-none rounded-xl p-2">
-              <QRCodeCanvas ref={qrRef} value={link} size={512} level="M" marginSize={0} bgColor="transparent" fgColor="currentColor" style={{ width: 96, height: 96 }} aria-label={t("pages.qa.share.qrLabel")} />
+              <QRCodeCanvas ref={qrRef} value={link} size={512} level="M" marginSize={0} bgColor="#ffffff" fgColor="#1c1917" style={{ width: 96, height: 96 }} aria-label={t("pages.qa.share.qrLabel")} />
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <p className="text-xs text-muted-foreground">{t("pages.qa.share.qrHint")}</p>

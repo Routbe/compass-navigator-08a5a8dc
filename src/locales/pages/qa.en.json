@@ -130,5 +130,22 @@
   "pages.qa.help.label": "Question guides",
   "pages.qa.help.questions": "About anonymous questions",
   "pages.qa.help.privacy": "Anonymity & safety",
-  "pages.qa.help.ai": "AI & Ghost Mode"
+  "pages.qa.help.ai": "AI & Ghost Mode",
+  "pages.qa.inbox.filterLabel": "Filter messages",
+  "pages.qa.inbox.filter.all": "All",
+  "pages.qa.inbox.filter.open": "Unanswered",
+  "pages.qa.inbox.filter.answered": "Answered",
+  "pages.qa.inbox.emptyFilter": "No messages in this view.",
+  "pages.qa.inbox.deleted": "Message deleted",
+  "pages.qa.inbox.undo": "Undo",
+  "pages.qa.inbox.newArrival": "New anonymous message",
+  "pages.qa.inbox.loadingMore": "Loading more messages…",
+  "pages.qa.inbox.insights": "Insights",
+  "pages.qa.inbox.insightsWeek": "questions this week",
+  "pages.qa.inbox.insightsWeekLabel": "Questions this week",
+  "pages.qa.inbox.insightsRatio": "answered",
+  "pages.qa.inbox.insightsRatioLabel": "Answer ratio",
+  "pages.qa.share.qrLabel": "QR code to your question page",
+  "pages.qa.share.qrHint": "Scan to send an anonymous question right away. Great on a poster or sticker.",
+  "pages.qa.share.qrDownload": "Download QR"
 }
